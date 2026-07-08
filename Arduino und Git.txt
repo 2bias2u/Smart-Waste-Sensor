@@ -1,0 +1,20 @@
+Best Practice GitHub und Arduino
+
+Anleitung: Installation:
+1. Arduino installieren (https://support.arduino.cc/hc/en-us/articles/360019833020-Download-and-install-Arduino-IDE)
+2. Git Hub Desktop Installieren (https://docs.github.com/de/desktop/installing-and-authenticating-to-github-desktop/installing-github-desktop)
+3. File —> Clone Repository —> „2bias2u/Smart-Waste-Sensor“ auswählen, Local Path ggf. Anpassen, „Clone“
+4. Arduino öffnen, Menü „Arduino IDE“, Preferences, Sketchbooklocation an Github Local Path anpassen
+
+
+
+Infos für die Nutzung:
+1. Vor Nutzung lokale Daten in GitHub Local runterladen
+2. Bearbeiten
+3. nach Nutzung Commiten mit Kommentar etc.
+
+
+Branches: 
+Main - Funktioniert, approved 
+Entwurf pro Person - noch im Entwurf / in Bearbeitung
+
