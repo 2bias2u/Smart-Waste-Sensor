@@ -1,0 +1,26 @@
+name: 🐛 Bug
+description: Ein Fehler im aktuellen Sprint oder Produkt
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Fehlerbeschreibung
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Reproduzieren
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Schweregrad
+      options: ["Kritisch", "Hoch", "Mittel", "Niedrig"]
+    validations:
+      required: true

@@ -1,0 +1,32 @@
+name: ✅ Task
+description: Eine technische Aufgabe innerhalb eines Sprints
+title: "[TASK] "
+labels: ["task"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was muss gemacht werden?
+    validations:
+      required: true
+
+  - type: textarea
+    id: subtasks
+    attributes:
+      label: Teilschritte
+      placeholder: |
+        - [ ] Schritt 1
+        - [ ] Schritt 2
+
+  - type: dropdown
+    id: story-points
+    attributes:
+      label: Story Points / Aufwand
+      options: ["1", "2", "3", "5", "8"]
+
+  - type: input
+    id: related-story
+    attributes:
+      label: Zugehörige Story
+      placeholder: "#Issue-Nummer"
