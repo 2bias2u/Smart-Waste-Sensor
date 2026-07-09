@@ -1,6 +1,15 @@
 /*
   Pololu VL53L3CX (bis 500 cm) am ESP32 auslesen
   Benötigte Bibliothek: "STM32duino VL53L3CX" von STMicroelectronics
+  Board: uPesy ESP32 Wroom Dev
+  Pin Belegung:
+  Pololu VL53L3CX ESP32
+  VIN 3V3
+  GND GND 
+  SDA GPIO 21 (SDA)
+  SCL GPIO 22 (SCL)
+  XSHUT GPIO 4
+  GPIO1 (Interrupt)nicht angeschlossen (nur für Interrupt-Betrieb nötig)
 */
 
 #include <Wire.h>
