@@ -14,7 +14,7 @@ void setup() {
   Serial.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, SENSOR_RX, SENSOR_TX);
   delay(500);
-  Serial.println("LD2413 Parser - Ausgabe alle 10s");
+  Serial.println("LD2413 Parser - alle 10s");
 }
 
 void loop() {
