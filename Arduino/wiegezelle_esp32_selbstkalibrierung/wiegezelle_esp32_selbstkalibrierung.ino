@@ -1,6 +1,14 @@
 #include "HX711.h"
 
 /*
+Sensordrähte an den HX711:
+Sensor 1 Weiß → E+
+Sensor 2 Weiß → E-
+Sensor 1 Rot → A-
+Sensor 2 Rot → A+
+*/
+
+/*
  * Wiegezellen-Sketch für den ESP32 (WROOM-32) - rein lokal, ohne WLAN/LoRaWAN
  *
  * Funktionsweise:
