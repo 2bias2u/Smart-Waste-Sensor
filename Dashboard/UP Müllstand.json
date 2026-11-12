@@ -1,0 +1,2199 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 15,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Kennzahlen\n\nÜberblick für den gewählten Zeitraum: gesamtes Abfallaufkommen in Litern, Anzahl erkannter Leerungen, durchschnittlicher Füllstand zum Zeitpunkt der Leerung und Anzahl der Sensoren mit Messung in den letzten 24 Stunden.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Abfall gesamt"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "litre"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ø Füllstand bei Leerung"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "dark-red"
+                    },
+                    {
+                      "color": "dark-yellow",
+                      "value": 60
+                    },
+                    {
+                      "color": "dark-green",
+                      "value": 90
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Leerungen"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sensoren online"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 22,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 40
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH s AS (\r\n    SELECT * FROM sensor_data_uni\r\n    WHERE type IN (${type:sqlstring})\r\n      AND regexp_replace(split_part(location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n      AND gebaude IN (${standort:sqlstring})\r\n)\r\nSELECT\r\n    (SELECT ROUND(SUM(GREATEST(d.new_fill_in, 0) / 100.0 * s.volumen_in_l::numeric))\r\n       FROM sensor_daily_delta d JOIN s ON s.sensor_id = d.sensor_id\r\n      WHERE $__timeFilter(d.ts))                         AS \"Abfall gesamt\",\r\n    (SELECT COUNT(*)\r\n       FROM sensor_last_empty e JOIN s ON s.sensor_id = e.sensor_id\r\n      WHERE $__timeFilter(e.created_at))                 AS \"Leerungen\",\r\n    (SELECT ROUND(AVG(e.fill_before_empty)::numeric, 1)\r\n       FROM sensor_last_empty e JOIN s ON s.sensor_id = e.sensor_id\r\n      WHERE $__timeFilter(e.created_at))                 AS \"Ø Füllstand bei Leerung\";",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "  SELECT COUNT(*) FILTER (WHERE letzte >= now() - INTERVAL '24 hours')::text\r\n         || ' / ' || COUNT(*) AS \"Sensoren online\"\r\n  FROM (\r\n      SELECT f.sensor_id, MAX(f.created_at) AS letzte\r\n      FROM sensor_fill_level f\r\n      JOIN sensor_data_uni s ON s.sensor_id = f.sensor_id\r\n      WHERE s.type    IN (${type:sqlstring})\r\n        AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n        AND s.gebaude IN (${standort:sqlstring})\r\n      GROUP BY f.sensor_id\r\n  ) t;",
+          "refId": "B",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 25,
+      "panels": [],
+      "title": "Optimierung der Containeranzahl",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Aktueller Füllstand\n\nLetzter gemessener Füllstand je Behälter in Prozent des Volumens. Grün < 60 %, gelb ab 60 %, rot ab 90 %. Rote Behälter sollten zeitnah geleert werden. Der Zeitpunkt der Messung steht in der Tabelle „Sensorstatus“.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#808080",
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "decimals": 1,
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red"
+              },
+              {
+                "color": "dark-yellow",
+                "value": 60
+              },
+              {
+                "color": "light-green",
+                "value": 80
+              },
+              {
+                "color": "dark-green",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ø Füllstand vor Leerung"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "displayName",
+                "value": "Füllstand"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "created_at"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Letzte Messung"
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sensor_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sensor-ID"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "type"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Abfallart"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 24,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "behaelter",
+        "xTickLabelRotation": -45,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  s.gebaude || ' · ' || s.type                                         AS behaelter,\r\n  ROUND(AVG(LEAST(GREATEST(e.fill_before_empty, 0), 100))::numeric, 1) AS \"Ø Füllstand vor Leerung\"\r\nFROM sensor_last_empty e\r\nJOIN sensor_data_uni s ON s.sensor_id = e.sensor_id\r\nWHERE s.type IN (${type:sqlstring})\r\n  AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n  AND s.gebaude IN (${standort:sqlstring})\r\n  AND $__timeFilter(e.created_at)\r\nGROUP BY s.sensor_id, s.gebaude, s.type\r\nORDER BY 2 ASC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Durchschnittlicher Füllstand bei Entleerung",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Behälter auf dem Campus, eingefärbt nach Ø Füllstand vor der Entleerung (rot < 60 %, gelb ab 60 %, grün ab 90 %). Tooltip: Behälter, Standort, Füllstand, Gewicht. Gewicht simuliert (Volumen × Schüttdichte).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red"
+              },
+              {
+                "color": "dark-yellow",
+                "value": 60
+              },
+              {
+                "color": "green",
+                "value": 80
+              },
+              {
+                "color": "dark-green",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 21,
+      "options": {
+        "basemap": {
+          "config": {},
+          "name": "Layer 0",
+          "type": "osm-standard"
+        },
+        "controls": {
+          "mouseWheelZoom": true,
+          "showAttribution": true,
+          "showDebug": false,
+          "showMeasure": false,
+          "showScale": false,
+          "showZoom": true
+        },
+        "layers": [
+          {
+            "config": {
+              "showLegend": true,
+              "style": {
+                "color": {
+                  "field": "fill_level",
+                  "fixed": "dark-green"
+                },
+                "opacity": 0.9,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 13,
+                  "max": 15,
+                  "min": 2
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "text": {
+                  "fixed": "",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetY": -15,
+                  "textAlign": "left",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "location": {
+              "latitude": "lat",
+              "longitude": "lon",
+              "mode": "coords"
+            },
+            "name": "Füllstand",
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "tooltip": {
+          "mode": "details"
+        },
+        "view": {
+          "allLayers": true,
+          "id": "coords",
+          "lat": 52.4005,
+          "lon": 13.011,
+          "zoom": 16
+        }
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    s.lat,\r\n    s.lon,\r\n    s.gebaude || ' · ' || s.type                                         AS behaelter,\r\n    s.standortbeschreibung                                               AS standort,\r\n    ROUND(AVG(LEAST(GREATEST(e.fill_before_empty, 0), 100))::numeric, 1) AS fill_level,\r\n    ROUND(AVG(\r\n        LEAST(GREATEST(e.fill_before_empty, 0), 100) / 100.0 * s.volumen_in_l::numeric\r\n        * CASE s.type WHEN 'Restabfall' THEN 0.15\r\n                      WHEN 'Papier'     THEN 0.08\r\n                      ELSE 0.12 END\r\n        * (0.8 + 0.4 * (abs(hashtext(e.sensor_id || e.created_at::text)) % 1000) / 1000.0)\r\n    )::numeric, 1)                                                       AS gewicht_kg,\r\n    COUNT(*)                                                             AS anzahl_leerungen,\r\n    MAX(e.created_at)                                                    AS letzte_leerung\r\nFROM sensor_last_empty e\r\nJOIN sensor_data_uni s ON s.sensor_id = e.sensor_id\r\nWHERE s.type IN (${type:sqlstring})\r\n  AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n  AND s.gebaude IN (${standort:sqlstring})\r\n  AND $__timeFilter(e.created_at)\r\nGROUP BY s.sensor_id, s.lat, s.lon, s.gebaude, s.type, s.standortbeschreibung\r\nORDER BY fill_level DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Karte: Ø Füllstand und Gewicht vor Entleerung",
+      "type": "geomap"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Tonnenanzahl: heute vorhandene Tonnen am Standort.\nBedarf Vorlesungszeit / Semesterferien: benötigte Tonnen in der jeweiligen Phase bei eingestelltem Leerungsintervall und 90 % Zielfüllgrad. Vorlesungszeit = ca. 15.10.–07.02. und 15.04.–24.07., alles andere inklusive Weihnachtspause = Semesterferien.\nEmpfehlung: Vergleich der Tonnenanzahl mit dem höheren der beiden Bedarfe.\nLeerungen/Jahr fest: Leerungen pro Jahr im heutigen festen Rhythmus. Leerungen/Jahr Bedarf: Leerungen pro Jahr, wenn nur bei Bedarf geleert wird. einsparbar: Differenz der beiden.\nDerzeit Simulationsdaten ohne saisonale Schwankung, belastbare Aussagen erst mit einem Jahr echter Messdaten.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Empfehlung"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "pattern": "passt",
+                      "result": {
+                        "color": "dark-green",
+                        "index": 0
+                      }
+                    },
+                    "type": "regex"
+                  },
+                  {
+                    "options": {
+                      "pattern": "entfernen",
+                      "result": {
+                        "color": "dark-red",
+                        "index": 1
+                      }
+                    },
+                    "type": "regex"
+                  },
+                  {
+                    "options": {
+                      "pattern": ".*(weniger|mehr)",
+                      "result": {
+                        "color": "dark-yellow",
+                        "index": 2
+                      }
+                    },
+                    "type": "regex"
+                  },
+                  {
+                    "options": {
+                      "pattern": "keine Daten",
+                      "result": {
+                        "color": "#808080",
+                        "index": 3
+                      }
+                    },
+                    "type": "regex"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 101
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "einsparbar"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "dark-green"
+                    },
+                    {
+                      "color": "dark-yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "dark-red",
+                      "value": 5
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 27,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH tag AS (\r\n    SELECT s.gebaude, s.type, date_trunc('day', d.ts)::date AS tag,\r\n           SUM(GREATEST(d.new_fill_in, 0) / 100.0 * s.volumen_in_l::numeric) AS liter\r\n    FROM sensor_daily_delta d\r\n    JOIN sensor_data_uni s ON s.sensor_id = d.sensor_id\r\n    WHERE $__timeFilter(d.ts)\r\n      AND s.type    IN (${type:sqlstring})\r\n      AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n      AND s.gebaude IN (${standort:sqlstring})\r\n    GROUP BY 1, 2, 3\r\n),\r\ntag_phase AS (\r\n    SELECT t.*,\r\n        CASE\r\n            WHEN to_char(t.tag, 'MM-DD') >= '12-22'\r\n              OR to_char(t.tag, 'MM-DD') <= '01-01'                    THEN 'Ferien'     -- Weihnachtspause\r\n            WHEN to_char(t.tag, 'MM-DD') >= '10-15'\r\n              OR to_char(t.tag, 'MM-DD') <= '02-07'                    THEN 'Vorlesung'  -- Wintersemester\r\n            WHEN to_char(t.tag, 'MM-DD') BETWEEN '04-15' AND '07-24'   THEN 'Vorlesung'  -- Sommersemester\r\n            ELSE 'Ferien'\r\n        END AS phase\r\n    FROM tag t\r\n),\r\nbestand AS (\r\n    SELECT gebaude, type, COUNT(*) AS tonnen, AVG(volumen_in_l::numeric) AS volumen\r\n    FROM sensor_data_uni\r\n    WHERE type    IN (${type:sqlstring})\r\n      AND regexp_replace(split_part(location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n      AND gebaude IN (${standort:sqlstring})\r\n    GROUP BY 1, 2\r\n),\r\nphase_bedarf AS (\r\n    SELECT t.gebaude, t.type, t.phase,\r\n           CEIL(AVG(t.liter) * ${intervall} / (b.volumen * 0.9)) AS noetig\r\n    FROM tag_phase t\r\n    JOIN bestand b ON b.gebaude = t.gebaude AND b.type = t.type\r\n    GROUP BY t.gebaude, t.type, t.phase, b.volumen\r\n),\r\njahr AS (\r\n    SELECT gebaude, type, AVG(liter) * 365 AS liter_jahr FROM tag GROUP BY 1, 2\r\n)\r\nSELECT\r\n    b.gebaude || ' · ' || b.type                                         AS \"Standort\",\r\n    b.tonnen                                                             AS \"Tonnenanzahl\",\r\n    MAX(pb.noetig) FILTER (WHERE pb.phase = 'Vorlesung')                 AS \"Bedarf Vorlesungszeit\",\r\n    MAX(pb.noetig) FILTER (WHERE pb.phase = 'Ferien')                    AS \"Bedarf Semesterferien\",\r\n    CASE\r\n        WHEN MAX(pb.noetig) IS NULL     THEN 'keine Daten'\r\n        WHEN MAX(pb.noetig) = 0         THEN 'entfernen'\r\n        WHEN MAX(pb.noetig) < b.tonnen  THEN (b.tonnen - MAX(pb.noetig))::int || ' weniger'\r\n        WHEN MAX(pb.noetig) > b.tonnen  THEN (MAX(pb.noetig) - b.tonnen)::int || ' mehr'\r\n        ELSE 'passt'\r\n    END                                                                  AS \"Empfehlung\",\r\n    ROUND(365.0 / ${intervall})                                          AS \"Leerungen/Jahr fest\",\r\n    CEIL(j.liter_jahr / (b.tonnen * b.volumen * 0.9))                    AS \"Leerungen/Jahr Bedarf\",\r\n    GREATEST(ROUND(365.0 / ${intervall})\r\n             - CEIL(j.liter_jahr / (b.tonnen * b.volumen * 0.9)), 0)     AS \"einsparbar\"\r\nFROM bestand b\r\nLEFT JOIN phase_bedarf pb ON pb.gebaude = b.gebaude AND pb.type = b.type\r\nLEFT JOIN jahr j          ON j.gebaude  = b.gebaude AND j.type  = b.type\r\nGROUP BY b.gebaude, b.type, b.tonnen, b.volumen, j.liter_jahr\r\nORDER BY \"einsparbar\" DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Bedarf je Standort und Leerungsinterval",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Benötigte minus vorhandene Tonnen je Standort und Woche, bei eingestelltem Leerungsintervall und 90 % Zielfüllgrad. Blau = Tonne(n) überflüssig, grün = passt, rot = zu wenig Kapazität. Derzeit Simulationsdaten ohne saisonale Schwankung.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "fillOpacity": 70,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1
+          },
+          "displayName": "${__field.labels.metric}",
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "dark-green",
+                  "index": 2,
+                  "text": "passt"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "from": -100,
+                "result": {
+                  "color": "dark-blue",
+                  "index": 0,
+                  "text": "zu viel"
+                },
+                "to": -1
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 1,
+                "result": {
+                  "color": "dark-red",
+                  "index": 1,
+                  "text": "zu wenig"
+                },
+                "to": 100
+              },
+              "type": "range"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "id": 28,
+      "options": {
+        "colWidth": 0.9,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "rowHeight": 0.9,
+        "showValue": "never",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH tag AS (\r\n    SELECT s.gebaude, s.type, date_trunc('day', d.ts)::date AS tag,\r\n           SUM(GREATEST(d.new_fill_in, 0) / 100.0 * s.volumen_in_l::numeric) AS liter\r\n    FROM sensor_daily_delta d\r\n    JOIN sensor_data_uni s ON s.sensor_id = d.sensor_id\r\n    WHERE $__timeFilter(d.ts)\r\n      AND s.type    IN (${type:sqlstring})\r\n      AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n      AND s.gebaude IN (${standort:sqlstring})\r\n    GROUP BY 1, 2, 3\r\n),\r\nbestand AS (\r\n    SELECT gebaude, type, COUNT(*) AS tonnen, AVG(volumen_in_l::numeric) AS volumen\r\n    FROM sensor_data_uni\r\n    GROUP BY 1, 2\r\n)\r\nSELECT\r\n    date_trunc('week', t.tag)        AS time,\r\n    b.gebaude || ' · ' || b.type     AS metric,\r\n    CEIL(AVG(t.liter) * ${intervall} / (b.volumen * 0.9)) - b.tonnen AS bilanz\r\nFROM tag t\r\nJOIN bestand b ON b.gebaude = t.gebaude AND b.type = t.type\r\nGROUP BY 1, 2, b.volumen, b.tonnen\r\nORDER BY 1;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Tonnen-Bilanz pro Woche",
+      "transformations": [
+        {
+          "id": "partitionByValues",
+          "options": {
+            "fields": [
+              "metric"
+            ],
+            "keepFields": false
+          }
+        }
+      ],
+      "type": "status-history"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 10,
+      "panels": [],
+      "title": "Übersicht",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Karte mit Füllstand und Gewicht\n\nStandorte aller Behälter auf dem Campus, eingefärbt nach aktuellem Füllstand (grün < 60 %, gelb ab 60 %, rot ab 90 %). Beim Überfahren erscheinen Behälter, Standort, Füllstand und Gewicht. Das Gewicht ist simuliert (Füllvolumen × angenommene Schüttdichte), bis die Gewichtssensoren angeschlossen sind.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green"
+              },
+              {
+                "color": "dark-yellow",
+                "value": 60
+              },
+              {
+                "color": "dark-red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 11,
+        "x": 0,
+        "y": 33
+      },
+      "id": 26,
+      "options": {
+        "basemap": {
+          "config": {},
+          "name": "Layer 0",
+          "type": "osm-standard"
+        },
+        "controls": {
+          "mouseWheelZoom": true,
+          "showAttribution": true,
+          "showDebug": false,
+          "showMeasure": false,
+          "showScale": false,
+          "showZoom": true
+        },
+        "layers": [
+          {
+            "config": {
+              "showLegend": true,
+              "style": {
+                "color": {
+                  "field": "fill_level",
+                  "fixed": "dark-green"
+                },
+                "opacity": 0.9,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 13,
+                  "max": 15,
+                  "min": 2
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "text": {
+                  "fixed": "",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetY": -15,
+                  "textAlign": "left",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "location": {
+              "latitude": "lat",
+              "longitude": "lon",
+              "mode": "coords"
+            },
+            "name": "Füllstand",
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "tooltip": {
+          "mode": "details"
+        },
+        "view": {
+          "allLayers": true,
+          "id": "coords",
+          "lat": 52.4005,
+          "lon": 13.011,
+          "zoom": 16
+        }
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT DISTINCT ON (f.sensor_id)\r\n    s.lat,\r\n    s.lon,\r\n    s.gebaude || ' · ' || s.type            AS behaelter,\r\n    s.standortbeschreibung                  AS standort,\r\n    LEAST(GREATEST(f.fill_level, 0), 100)   AS fill_level,\r\n    ROUND((\r\n        LEAST(GREATEST(f.fill_level, 0), 100) / 100.0 * s.volumen_in_l::numeric\r\n        * CASE s.type WHEN 'Restabfall' THEN 0.15\r\n                      WHEN 'Papier'     THEN 0.08\r\n                      ELSE 0.12 END\r\n        * (0.8 + 0.4 * (abs(hashtext(f.sensor_id || f.created_at::text)) % 1000) / 1000.0)\r\n    )::numeric, 1)                          AS gewicht_kg,\r\n    f.created_at                            AS letzte_messung\r\nFROM sensor_fill_level f\r\nJOIN sensor_data_uni s ON s.sensor_id = f.sensor_id\r\nWHERE s.type    IN (${type:sqlstring})\r\n  AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n  AND s.gebaude IN (${standort:sqlstring})\r\nORDER BY f.sensor_id, f.created_at DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Karte mit Füllstand und Gewicht",
+      "type": "geomap"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Aktueller Füllstand\n\nLetzter gemessener Füllstand je Behälter in Prozent des Volumens. Grün < 60 %, gelb ab 60 %, rot ab 90 %. Rote Behälter sollten zeitnah geleert werden. Der Zeitpunkt der Messung steht in der Tabelle „Sensorstatus“.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#808080",
+            "mode": "thresholds"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "decimals": 1,
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-green"
+              },
+              {
+                "color": "dark-yellow",
+                "value": 60
+              },
+              {
+                "color": "dark-red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "fill_level"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "displayName",
+                "value": "Füllstand"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "created_at"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Letzte Messung"
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sensor_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sensor-ID"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "type"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Abfallart"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 13,
+        "x": 11,
+        "y": 33
+      },
+      "id": 12,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "behaelter",
+        "xTickLabelRotation": -45,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT *\r\nFROM (\r\n    SELECT DISTINCT ON (f.sensor_id)\r\n        f.sensor_id,\r\n        s.gebaude || ' · ' || s.type           AS behaelter,\r\n        s.type,\r\n        f.created_at,\r\n        LEAST(GREATEST(f.fill_level, 0), 100) AS fill_level\r\n    FROM sensor_fill_level f\r\n    JOIN sensor_data_uni s ON s.sensor_id = f.sensor_id\r\n    WHERE s.type    IN (${type:sqlstring})\r\n      AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n      AND s.gebaude IN (${standort:sqlstring})\r\n    ORDER BY f.sensor_id, f.created_at DESC\r\n) t\r\nORDER BY fill_level DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Aktueller Füllstand",
+      "type": "barchart"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 11,
+      "panels": [],
+      "title": "Analyse",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Sensorstatus\n\nZeitpunkt der letzten Messung je Sensor. Ein Sensor gilt als ohne Messung (rot), wenn er länger als 24 Stunden keine Daten gesendet hat. Mögliche Ursachen sind ein leerer Akku, eine Funkstörung oder ein Defekt.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sensor_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sensor-ID"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "letzte_messung"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Letzte Messung"
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Status"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "Keine Messung": {
+                        "color": "dark-red",
+                        "index": 1
+                      },
+                      "Messung vorhanden": {
+                        "color": "dark-green",
+                        "index": 0
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "zeit_seit_messung"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Zeit seit letzter Messung"
+              },
+              {
+                "id": "unit",
+                "value": "dtdhms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "behaelter"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Behälter"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 0,
+        "y": 49
+      },
+      "id": 14,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    s.gebaude || ' · ' || s.type                         AS behaelter,\r\n    f.sensor_id,\r\n    MAX(f.created_at)                                    AS letzte_messung,\r\n    EXTRACT(EPOCH FROM now() - MAX(f.created_at))        AS zeit_seit_messung,\r\n    CASE\r\n        WHEN MAX(f.created_at) >= now() - INTERVAL '24 hours'\r\n            THEN 'Messung vorhanden'\r\n        ELSE 'Keine Messung'\r\n    END                                                  AS status\r\nFROM sensor_fill_level f\r\nJOIN sensor_data_uni s ON s.sensor_id = f.sensor_id\r\nWHERE s.type    IN (${type:sqlstring})\r\n  AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n  AND s.gebaude IN (${standort:sqlstring})\r\nGROUP BY s.gebaude, s.type, f.sensor_id\r\nORDER BY letzte_messung DESC;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Sensorstatus",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "behaelter": 0,
+              "letzte_messung": 3,
+              "sensor_id": 1,
+              "status": 2,
+              "zeit_seit_messung": 4
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Behälterauslastung\n\nDurchschnittliche tägliche Abfallmenge je Behälter und daraus berechnet die Zeit, bis ein leerer Behälter voll ist. Rot (< 3 Tage): Behälter zu klein oder zu selten geleert. Grün (≥ 7 Tage): Behälter könnte seltener geleert oder verkleinert werden.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto",
+              "wrapText": true
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red"
+              },
+              {
+                "color": "dark-yellow",
+                "value": 3
+              },
+              {
+                "color": "dark-green",
+                "value": 7
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tage bis voll"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Volumen"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "litre"
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Standort"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 218
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ø Liter/Tag"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 106
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Behälter"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 172
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 12,
+        "y": 49
+      },
+      "id": 23,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH tag AS (\r\n    SELECT d.sensor_id, date_trunc('day', d.ts) AS tag,\r\n           SUM(GREATEST(d.new_fill_in, 0)) AS prozent\r\n    FROM sensor_daily_delta d\r\n    WHERE $__timeFilter(d.ts)\r\n    GROUP BY 1, 2\r\n)\r\nSELECT\r\n    s.gebaude || ' · ' || s.type                                         AS \"Behälter\",\r\n    s.standortbeschreibung                                               AS \"Standort\",\r\n    s.volumen_in_l::numeric                                              AS \"Volumen\",\r\n    ROUND(AVG(t.prozent) / 100.0 * s.volumen_in_l::numeric, 1)           AS \"Ø Liter/Tag\",\r\n    ROUND(100.0 / NULLIF(AVG(t.prozent), 0), 1)                          AS \"Tage bis voll\"\r\nFROM tag t\r\nJOIN sensor_data_uni s ON s.sensor_id = t.sensor_id\r\nWHERE s.type    IN (${type:sqlstring})\r\n  AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n  AND s.gebaude IN (${standort:sqlstring})\r\nGROUP BY s.gebaude, s.type, s.standortbeschreibung, s.volumen_in_l\r\nORDER BY \"Tage bis voll\";",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Behälterinformation",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Abfallaufkommen in l pro Woche\n\nNeu hinzugekommene Abfallmenge pro Woche in Litern, getrennt nach Müllart. Berechnet aus dem Anstieg des Füllstands × Behältervolumen. Leerungen werden nicht mitgezählt. Die erste und letzte Woche können unvollständig sein.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "litre"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "liter Papier"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "liter Restabfall"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#808080",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 6,
+        "x": 0,
+        "y": 60
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    date_trunc('week', d.ts) AS time,\r\n    s.type                   AS metric,\r\n    SUM(GREATEST(d.new_fill_in, 0) / 100.0 * s.volumen_in_l::numeric) AS liter\r\nFROM sensor_daily_delta d\r\nJOIN sensor_data_uni s ON s.sensor_id = d.sensor_id\r\nWHERE $__timeFilter(d.ts)\r\n  AND s.type    IN (${type:sqlstring})\r\n  AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n  AND s.gebaude IN (${standort:sqlstring})\r\nGROUP BY 1, 2\r\nORDER BY 1;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Abfallaufkommen in l pro Woche",
+      "transformations": [
+        {
+          "id": "partitionByValues",
+          "options": {
+            "fields": [
+              "metric"
+            ],
+            "keepFields": false
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Abfallaufkommen in kg pro Woche\n\nWie „Abfallaufkommen pro Woche“, aber in Kilogramm. Simulierte Werte: Füllvolumen × angenommene Schüttdichte (Restabfall 0,15 kg/L, Papier 0,08 kg/L). Sobald die Gewichtssensoren angeschlossen sind, werden hier echte Messwerte angezeigt.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "masskg"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "kg Papier"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "kg Restabfall"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 6,
+        "x": 6,
+        "y": 60
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    date_trunc('week', d.ts) AS time,\r\n    s.type                   AS metric,\r\n    SUM(\r\n        GREATEST(d.new_fill_in, 0) / 100.0 * s.volumen_in_l::numeric\r\n        * CASE s.type WHEN 'Restabfall' THEN 0.15\r\n                      WHEN 'Papier'     THEN 0.08\r\n                      ELSE 0.12 END\r\n        * (0.8 + 0.4 * (abs(hashtext(d.sensor_id || d.ts::text)) % 1000) / 1000.0)\r\n    ) AS kg\r\nFROM sensor_daily_delta d\r\nJOIN sensor_data_uni s ON s.sensor_id = d.sensor_id\r\nWHERE $__timeFilter(d.ts)\r\n  AND s.type    IN (${type:sqlstring})\r\n  AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n  AND s.gebaude IN (${standort:sqlstring})\r\nGROUP BY 1, 2\r\nORDER BY 1;",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Abfallaufkommen in kg pro Woche",
+      "transformations": [
+        {
+          "id": "partitionByValues",
+          "options": {
+            "fields": [
+              "metric"
+            ],
+            "keepFields": false
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "cf0g6y32klfy8f"
+      },
+      "description": "Verteilung des durchschnittlichen Füllstands vor Entleerung.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unter 60 %"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "60–90 %"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ab 90 %"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 60
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "values": [
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1+security-01",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "cf0g6y32klfy8f"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    COUNT(*) FILTER (WHERE e.fill_before_empty < 60)                    AS \"unter 60 %\",\r\n    COUNT(*) FILTER (WHERE e.fill_before_empty >= 60\r\n                       AND e.fill_before_empty < 90)                    AS \"60–90 %\",\r\n    COUNT(*) FILTER (WHERE e.fill_before_empty >= 90)                   AS \"ab 90 %\"\r\nFROM sensor_last_empty e\r\nJOIN sensor_data_uni s ON s.sensor_id = e.sensor_id\r\nWHERE $__timeFilter(e.created_at)\r\n  AND s.type    IN (${type:sqlstring})\r\n  AND regexp_replace(split_part(s.location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\r\n  AND s.gebaude IN (${standort:sqlstring});",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Füllstand bei Entleerung",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {}
+        }
+      ],
+      "type": "piechart"
+    }
+  ],
+  "preload": false,
+  "schemaVersion": 41,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "cf0g6y32klfy8f"
+        },
+        "definition": "SELECT DISTINCT type\nFROM sensor_data_uni\nWHERE type IS NOT NULL\nORDER BY type;",
+        "description": "",
+        "includeAll": true,
+        "label": "Müllart",
+        "multi": true,
+        "name": "type",
+        "options": [],
+        "query": "SELECT DISTINCT type\nFROM sensor_data_uni\nWHERE type IS NOT NULL\nORDER BY type;",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "cf0g6y32klfy8f"
+        },
+        "definition": "SELECT DISTINCT regexp_replace(split_part(location, ',', 1), '\\s*\\d+.*$', '')\nFROM sensor_data_uni ORDER BY 1",
+        "description": "",
+        "includeAll": true,
+        "label": "Campus",
+        "multi": true,
+        "name": "campus",
+        "options": [],
+        "query": "SELECT DISTINCT regexp_replace(split_part(location, ',', 1), '\\s*\\d+.*$', '')\nFROM sensor_data_uni ORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "cf0g6y32klfy8f"
+        },
+        "definition": "SELECT DISTINCT gebaude FROM sensor_data_uni\nWHERE regexp_replace(split_part(location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\n  AND type IN (${type:sqlstring})\nORDER BY 1",
+        "includeAll": true,
+        "label": "Standort",
+        "multi": true,
+        "name": "standort",
+        "options": [],
+        "query": "SELECT DISTINCT gebaude FROM sensor_data_uni\nWHERE regexp_replace(split_part(location, ',', 1), '\\s*\\d+.*$', '') IN (${campus:sqlstring})\n  AND type IN (${type:sqlstring})\nORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "7",
+          "value": "7"
+        },
+        "label": "Leerungsintervall (Tage)",
+        "name": "intervall",
+        "options": [
+          {
+            "selected": false,
+            "text": "3",
+            "value": "3"
+          },
+          {
+            "selected": true,
+            "text": "7",
+            "value": "7"
+          },
+          {
+            "selected": false,
+            "text": "14",
+            "value": "14"
+          }
+        ],
+        "query": "3, 7, 14",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now/fy",
+    "to": "now/fy"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "UP Müllstand 2",
+  "uid": "6a751cf9-4d75-4aee-930f-a6e3f72cfc1b",
+  "version": 63
+}
